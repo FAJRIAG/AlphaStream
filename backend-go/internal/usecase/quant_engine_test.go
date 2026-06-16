@@ -127,6 +127,67 @@ func TestComputeAll_RSI_AllGains_Returns100(t *testing.T) {
 	}
 }
 
+func TestComputeAll_RSI_VaryingPrices(t *testing.T) {
+	q := usecase.NewQuantEngine()
+	// Create 40 candles with oscillating prices to ensure RSI is not stuck at extremes
+	candles := make([]entity.OHLCV, 40)
+	baseTime := time.Now()
+	for i := 0; i < 40; i++ {
+		price := 100.0
+		if i%2 == 0 {
+			price = 105.0
+		} else {
+			price = 95.0
+		}
+		candles[i] = entity.OHLCV{
+			Symbol:    "TEST",
+			Timestamp: baseTime.Add(time.Duration(i) * time.Minute),
+			Open:      price, High: price + 1, Low: price - 1, Close: price,
+			Volume: 1000,
+		}
+	}
+
+	ind, _ := q.ComputeAll("TEST", candles)
+
+	if ind == nil || ind.RSI14 == nil {
+		t.Fatal("Expected RSI14 to be computed")
+	}
+
+	rsi := *ind.RSI14
+	if rsi <= 10.0 || rsi >= 90.0 {
+		t.Errorf("Expected RSI to be in a moderate range for alternating series, got %.4f", rsi)
+	}
+}
+
+func TestComputeAll_ATR_VaryingPrices(t *testing.T) {
+	q := usecase.NewQuantEngine()
+	candles := make([]entity.OHLCV, 40)
+	baseTime := time.Now()
+	for i := 0; i < 40; i++ {
+		// True range will vary
+		high := 100.0 + float64(i%5)*2.0
+		low := 95.0 - float64(i%3)*1.0
+		closePrice := (high + low) / 2.0
+		candles[i] = entity.OHLCV{
+			Symbol:    "TEST",
+			Timestamp: baseTime.Add(time.Duration(i) * time.Minute),
+			Open:      closePrice, High: high, Low: low, Close: closePrice,
+			Volume: 1000,
+		}
+	}
+
+	ind, _ := q.ComputeAll("TEST", candles)
+
+	if ind == nil || ind.ATR14 == nil {
+		t.Fatal("Expected ATR14 to be computed")
+	}
+
+	atr := *ind.ATR14
+	if atr <= 0.0 {
+		t.Errorf("Expected ATR to be greater than 0, got %.4f", atr)
+	}
+}
+
 // ─── Golden Cross Tests ───────────────────────────────────────────────────────
 
 func TestComputeAll_GoldenCross_Detection(t *testing.T) {

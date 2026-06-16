@@ -136,14 +136,11 @@ func (q *QuantEngine) computeRSI(closes []float64, period int) (float64, bool) {
 		return 0, false
 	}
 
-	// Use only the last period+1 values to keep computation bounded.
-	window := closes[len(closes)-(period+1):]
-
 	var totalGain, totalLoss float64
 
 	// First pass: simple average of gains and losses over the first `period` deltas.
 	for i := 1; i <= period; i++ {
-		delta := window[i] - window[i-1]
+		delta := closes[i] - closes[i-1]
 		if delta > 0 {
 			totalGain += delta
 		} else {
@@ -154,23 +151,21 @@ func (q *QuantEngine) computeRSI(closes []float64, period int) (float64, bool) {
 	avgGain := totalGain / float64(period)
 	avgLoss := totalLoss / float64(period)
 
-	// Wilder's smoothing for subsequent periods (if we have more data).
-	if len(closes) > period+1 {
-		remaining := closes[period+1:]
-		prev := closes[period]
-		for _, cur := range remaining {
-			delta := cur - prev
-			gain, loss := 0.0, 0.0
-			if delta > 0 {
-				gain = delta
-			} else {
-				loss = math.Abs(delta)
-			}
-			// Wilder's smoothed average
-			avgGain = (avgGain*float64(period-1) + gain) / float64(period)
-			avgLoss = (avgLoss*float64(period-1) + loss) / float64(period)
-			prev = cur
+	// Wilder's smoothing for subsequent periods (from index period+1 to the end).
+	prev := closes[period]
+	for i := period + 1; i < len(closes); i++ {
+		cur := closes[i]
+		delta := cur - prev
+		gain, loss := 0.0, 0.0
+		if delta > 0 {
+			gain = delta
+		} else {
+			loss = math.Abs(delta)
 		}
+		// Wilder's smoothed average
+		avgGain = (avgGain*float64(period-1) + gain) / float64(period)
+		avgLoss = (avgLoss*float64(period-1) + loss) / float64(period)
+		prev = cur
 	}
 
 	if avgLoss == 0 {
@@ -192,33 +187,25 @@ func (q *QuantEngine) computeATR(candles []entity.OHLCV, period int) (float64, b
 		return 0, false
 	}
 
-	window := candles[len(candles)-(period+1):]
-
-	// Compute True Range for each bar starting from index 1.
-	trValues := make([]float64, period)
+	// Compute True Range for each bar starting from index 1 to `period`.
+	var totalTR float64
 	for i := 1; i <= period; i++ {
-		curr := window[i]
-		prev := window[i-1]
+		curr := candles[i]
+		prev := candles[i-1]
 		tr := trueRange(curr, prev.Close)
-		trValues[i-1] = tr
+		totalTR += tr
 	}
 
 	// Initial ATR = simple average of first `period` TR values.
-	atr := 0.0
-	for _, tr := range trValues {
-		atr += tr
-	}
-	atr /= float64(period)
+	atr := totalTR / float64(period)
 
-	// Wilder's smoothing for any additional bars beyond the window.
-	if len(candles) > period+1 {
-		extra := candles[period+1:]
-		prevClose := candles[period].Close
-		for _, c := range extra {
-			tr := trueRange(c, prevClose)
-			atr = (atr*float64(period-1) + tr) / float64(period)
-			prevClose = c.Close
-		}
+	// Wilder's smoothing for any additional bars beyond the initial period.
+	prevClose := candles[period].Close
+	for i := period + 1; i < len(candles); i++ {
+		c := candles[i]
+		tr := trueRange(c, prevClose)
+		atr = (atr*float64(period-1) + tr) / float64(period)
+		prevClose = c.Close
 	}
 
 	return atr, true
