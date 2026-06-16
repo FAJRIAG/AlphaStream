@@ -1,28 +1,121 @@
-Nama Proyek: AlphaStream
-Deskripsi: Platform Analisis Saham Real-Time & Predictive Engine Kelas Enterprise.
-Tech Stack Utama: Go (Golang), Next.js (App Router), TypeScript, Tailwind CSS, MySQL (MAMP Mac M1).
+# AlphaStream 🚀
 
-Bertindaklah sebagai Senior Software Architect, Principal Clean Coder, dan Core Data Engineer. Saya ingin Anda membuat kode program untuk proyek "AlphaStream" dengan standar Clean Code yang sangat ketat, terstruktur, dan menerapkan arsitektur modular/Clean Architecture. 
+**AlphaStream** adalah platform analisis saham real-time dan engine prediksi otomatis kelas enterprise yang dibangun khusus untuk Bursa Efek Indonesia (IDX). Mengadopsi prinsip **Clean Architecture**, sistem ini dirancang modular, berkinerja tinggi (optimized untuk Mac M1), serta terbebas dari *memory leaks* pada aliran data streaming real-time.
 
-Sistem harus dioptimalkan untuk berjalan sangat ringan di Mac M1 RAM 8GB tanpa adanya memory leak pada sistem data streaming.
+---
 
-Berikut spesifikasi teknis dan standar penulisan kode yang HARUS Anda patuhi:
+## 🌟 Fitur Utama
 
-1. STANDAR CLEAN CODE & ARSITEKTUR BACKEND (Go):
-   - Terapkan pemisahan layer yang jelas (Ketik kodenya secara modular):
-     * Domain/Entity: Berisi struktur data (struct) dan interfaces bisnis inti (Enterprise Business Rules).
-     * Repository Layer: Berisi semua logika query database MySQL menggunakan database transaction yang aman dan driver 'go-sql-driver/mysql'.
-     * Usecase/Service Layer: Berisi logika bisnis murni, termasuk "Quantitative Engine" untuk menghitung indikator MA-20, MA-50, RSI (14), serta algoritma prediksi probabilitas tren (Golden Cross detection & volatility target price).
-     * Delivery/Handler Layer: Berisi HTTP REST API (menggunakan Gin/Fiber) dan WebSocket Handler (menggunakan Gorilla WebSocket).
-   - Patuhi prinsip SOLID. Gunakan Dependency Injection (DI) secara eksplisit via constructor function (Gunakan pattern `NewRepository`, `NewUsecase`, `NewHandler`).
-   - Penanganan Concurrency harus sangat aman: Gunakan Mutex (`sync.RWMutex`) atau Go Channels untuk mengamankan data di dalam WebSocket Hub dari data race / race condition.
-   - Tulis kode yang deskriptif, fungsi yang kecil (Single Responsibility), gunakan konstanta untuk nilai yang fix, dan tangani error secara elegan (bukan di-ignore).
+1. **Real-Time Market Data Streaming**: Aliran data harga saham live dan pembaruan candlestick 1 menit melalui koneksi WebSocket berkecepatan tinggi dengan integrasi Yahoo Finance.
+2. **Quantitative Engine (Pure & Deterministic)**:
+   * **Simple Moving Average (SMA)**: MA-20 & MA-50.
+   * **Relative Strength Index (RSI-14)**: Deteksi wilayah jenuh beli (*overbought*) dan jenuh jual (*oversold*).
+   * **Average True Range (ATR-14)**: Mengukur volatilitas pasar.
+   * **Pattern Detection**: Deteksi sinyal tren jangka menengah (*Golden Cross* & *Death Cross*).
+   * **Trend Probability Scoring**: Perhitungan persentase probabilitas arah pergerakan harga.
+   * **Volatility-Based Target Price**: Estimasi target harga naik/turun berbasis perkalian ATR.
+3. **Broker Summary (Bandarmology)**:
+   * Melacak akumulasi dan distribusi dari sekuritas lokal (YP, PD, CC, dll.) maupun asing (AK, CS, MS, dll.).
+   * Integrasi siap pakai (*out-of-the-box*) dengan API eksternal Stockbit jika `STOCKBIT_TOKEN` diset.
+4. **Best Buy Recommendations (Saham Bagus Dibeli)**: Panel pintar yang menyaring emiten berpredikat `BULLISH` dan mengurutkannya berdasarkan probabilitas pembelian tertinggi dari mesin kuantitatif.
+5. **Bloomberg-Style Premium UI**: Antarmuka responsif bernuansa gelap khas terminal Bloomberg dengan grafik candlestick interaktif menggunakan pustaka resmi `tradingview lightweight-charts`.
 
-2. STANDAR CLEAN CODE & ARSITEKTUR FRONTEND (Next.js):
-   - Gunakan Next.js App Router, TypeScript (Strict Mode), dan Tailwind CSS.
-   - Struktur folder harus teratur: Pisahkan antara `/components` (UI reusable), `/hooks` (logika WebSocket/fetch), `/context` atau `/store` (Zustand state management), dan `/app` (routing page).
-   - Hindari memory leak pada WebSocket di Next.js: Pastikan koneksi WebSocket di-clean up / didisconnect dengan benar di dalam return function `useEffect` ketika komponen unmount.
-   - Gunakan library resmi 'tradingview lightweight-charts' untuk merender chart candlestick secara live. Pastikan render grafik di-throttle/di-optimize agar tidak memicu re-render massal pada komponen UI lainnya (hindari UI freeze).
-   - Implementasikan clean TypeScript interfaces untuk setiap tipe data yang diterima dari WebSocket backend Go.
+---
 
-Tolong berikan blueprint struktur folder proyek AlphaStream yang rapi dan terstruktur terlebih dahulu. Setelah itu, berikan source code lengkap dan ter-optimasi untuk sisi 'backend-go' mulai dari layer Domain dan Database Setup secara bertahap.
+## 📂 Struktur Proyek
+
+### 1. Backend (`backend-go`)
+Mengikuti struktur Clean Architecture secara ketat:
+* `cmd/`: Titik masuk aplikasi (`server` untuk REST/WS API dan `seeder` untuk database master).
+* `config/`: Memuat variabel lingkungan (`.env`) dan koneksi MySQL/WebSocket.
+* `internal/domain/`:
+  * `entity/`: Struktur data murni bisnis (*enterprise business rules*) tanpa dependensi luar.
+  * `repository/`: Kontrak antarmuka (*interface*) untuk persistensi data.
+* `internal/repository/`: Implementasi konkret repositori (MySQL & in-memory cache Ring Buffer).
+* `internal/usecase/`: Logika bisnis inti (Stock & Quantitative Engine).
+* `internal/delivery/`: Pengantar HTTP REST API (Gin) & WebSocket Handler.
+* `migrations/`: Berkas SQL migrasi database secara bertahap.
+
+### 2. Frontend (`frontend-next`)
+* `app/`: Routing halaman (Next.js App Router).
+* `components/`: UI Bloomberg reusable (Header, Chart, Watchlist, Broker Summary, dll).
+* `hooks/`: Manajemen status WebSocket.
+* `lib/`: Klien API untuk pemanggilan endpoint backend.
+* `store/`: Manajemen state global menggunakan Zustand.
+* `types/`: Kontrak antarmuka TypeScript yang sinkron dengan entitas Go.
+
+---
+
+## 🛠️ Persiapan & Instalasi
+
+### Prasyarat
+* Go 1.21+
+* Node.js 18+
+* MySQL (MAMP atau server MySQL lokal)
+
+### 1. Setup Database
+1. Buat database baru bernama `alphastream` di server MySQL Anda.
+2. Jalankan berkas migrasi SQL yang berada di dalam folder `backend-go/migrations/` secara berurutan:
+   * [001_create_stocks.sql](file:///Applications/MAMP/htdocs/AlphaStream/backend-go/migrations/001_create_stocks.sql) (Membuat tabel master saham)
+   * [002_create_ohlcv.sql](file:///Applications/MAMP/htdocs/AlphaStream/backend-go/migrations/002_create_ohlcv.sql) (Membuat tabel riwayat harga)
+   * [003_create_indicators.sql](file:///Applications/MAMP/htdocs/AlphaStream/backend-go/migrations/003_create_indicators.sql) (Membuat tabel indikator teknikal)
+
+3. Konfigurasikan variabel lingkungan pada `.env` di direktori `backend-go/`:
+   ```env
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_USER=root
+   DB_PASSWORD=root
+   DB_NAME=alphastream
+   ```
+
+### 2. Menjalankan Seeder Emiten IDX
+Unduh dan muat otomatis seluruh daftar emiten resmi dari Bursa Efek Indonesia ke dalam database Anda:
+```bash
+cd backend-go
+go run cmd/seeder/main.go
+```
+
+---
+
+## 🚀 Menjalankan Aplikasi
+
+### Menjalankan Backend (Go)
+1. Pasang seluruh dependensi Go:
+   ```bash
+   cd backend-go
+   go mod tidy
+   ```
+2. Jalankan server backend:
+   ```bash
+   go run cmd/server/main.go
+   ```
+   Server akan berjalan secara lokal di port `8080`.
+
+### Menjalankan Frontend (Next.js)
+1. Pasang dependensi npm:
+   ```bash
+   cd frontend-next
+   npm install
+   ```
+2. Jalankan server pengembangan Next.js:
+   ```bash
+   npm run dev
+   ```
+   Buka peramban Anda dan akses halaman di [http://localhost:3000](http://localhost:3000).
+
+---
+
+## 📡 REST API Dokumentasi
+
+### 🔹 Saham (Stocks)
+* **`GET /api/v1/stocks`**: Mengambil daftar seluruh saham aktif.
+* **`GET /api/v1/stocks/recommendations`**: Mengambil daftar saham yang direkomendasikan beli (*BULLISH*).
+* **`GET /api/v1/stocks/:symbol`**: Detail informasi emiten saham tertentu.
+* **`GET /api/v1/stocks/:symbol/ohlcv`**: Riwayat harga candlestick (*1m/5m/1d*).
+* **`GET /api/v1/stocks/:symbol/prediction`**: Hasil prediksi pergerakan arah harga & target harga.
+* **`GET /api/v1/stocks/:symbol/broker-summary`**: Rangkuman akumulasi sekuritas (Bandarmology).
+
+### 🔹 Indikator (Indicators)
+* **`GET /api/v1/indicators/:symbol`**: Mengambil nilai indikator teknikal terhitung terakhir (MA-20, MA-50, RSI-14, ATR-14).
+* **`GET /api/v1/indicators/:symbol/summary`**: Gabungan data indikator teknikal dan prediksi dalam satu payload.
