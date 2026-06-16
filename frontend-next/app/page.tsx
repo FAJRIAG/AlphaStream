@@ -37,12 +37,14 @@ export default function DashboardPage() {
   const [brokerRefreshKey, setBrokerRefreshKey] = useState<number>(0);
   const [maximizedRightPanel, setMaximizedRightPanel] = useState<'quote' | 'technicals' | 'comparison' | 'bottom' | null>(null);
   const [isChartMaximized, setIsChartMaximized] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Connect WebSocket — routes messages to Zustand store
   useStockWebSocket();
 
   // Load stock master list on mount
   useEffect(() => {
+    setMounted(true);
     stockApi.getAllStocks().then(setStocks).catch(console.error);
   }, [setStocks]);
 
@@ -54,6 +56,16 @@ export default function DashboardPage() {
       .then((candles) => setCandles(activeSymbol, candles))
       .catch(console.error);
   }, [activeSymbol, setCandles]);
+
+  if (!mounted) {
+    return (
+      <div className="flex flex-col h-screen overflow-hidden bg-black select-none text-[#e0e0e0] font-sans justify-center items-center">
+        <div className="text-xs font-mono tracking-widest text-[#ff9800] uppercase animate-pulse">
+          INITIALIZING ALPHASTREAM TERMINAL...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-black select-none text-[#e0e0e0] font-sans">
