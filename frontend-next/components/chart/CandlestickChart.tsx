@@ -1,94 +1,150 @@
 'use client';
+
 import React, { useEffect, useRef } from 'react';
+import { createChart, ColorType, CandlestickSeries, HistogramSeries } from 'lightweight-charts';
+import { useStockStore } from '@/store/stockStore';
 
 interface CandlestickChartProps {
   symbol: string;
 }
 
-type TradingViewWindow = Window & {
-  TradingView?: {
-    widget: new (options: Record<string, unknown>) => unknown;
-  };
-};
-
 export default function CandlestickChart({ symbol }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<any>(null);
+  const candlestickSeriesRef = useRef<any>(null);
+  const volumeSeriesRef = useRef<any>(null);
 
+  // Subscribe to candles state in the store reactively
+  const candles = useStockStore((state) => state.candles[symbol]);
+
+  // 1. Initialize the chart instance
   useEffect(() => {
-    const scriptId = 'tradingview-widget-script';
-    let script = document.getElementById(scriptId) as HTMLScriptElement;
+    if (!containerRef.current) return;
 
-    const createWidget = () => {
-      const tradingViewWindow = window as TradingViewWindow;
+    // Create the lightweight-charts instance
+    const chart = createChart(containerRef.current, {
+      width: containerRef.current.clientWidth || 600,
+      height: containerRef.current.clientHeight || 300,
+      layout: {
+        background: { type: ColorType.Solid, color: '#090909' },
+        textColor: '#888888',
+        fontSize: 9,
+      },
+      grid: {
+        vertLines: { color: '#141414' },
+        horzLines: { color: '#141414' },
+      },
+      rightPriceScale: {
+        borderColor: '#222222',
+        scaleMargins: {
+          top: 0.1,
+          bottom: 0.2, // leave space for volume histogram
+        },
+      },
+      timeScale: {
+        borderColor: '#222222',
+        timeVisible: true,
+        secondsVisible: false,
+      },
+      crosshair: {
+        vertLine: {
+          color: '#555555',
+          labelBackgroundColor: '#2a2a2a',
+        },
+        horzLine: {
+          color: '#555555',
+          labelBackgroundColor: '#2a2a2a',
+        },
+      },
+    });
 
-      if (typeof window !== 'undefined' && tradingViewWindow.TradingView && containerRef.current) {
-        try {
-          const keysToRemove: string[] = [];
-          for (let i = 0; i < window.localStorage.length; i++) {
-            const key = window.localStorage.key(i);
-            if (key && (key.startsWith('tradingview') || key.includes('tradingview'))) {
-              keysToRemove.push(key);
-            }
-          }
-          keysToRemove.forEach((key) => window.localStorage.removeItem(key));
-        } catch {
-        }
+    // Add candlestick series using the new addSeries API (v5)
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#00d084',
+      downColor: '#ff3b30',
+      borderVisible: false,
+      wickUpColor: '#00d084',
+      wickDownColor: '#ff3b30',
+    });
 
-        containerRef.current.innerHTML = '';
+    // Add volume histogram series using the new addSeries API (v5)
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: {
+        type: 'volume',
+      },
+      priceScaleId: '', // overlay mode
+    });
 
-        const widgetId = `tradingview_${Math.random().toString(36).substring(2, 9)}`;
-        const childDiv = document.createElement('div');
-        childDiv.id = widgetId;
-        childDiv.style.width = '100%';
-        childDiv.style.height = '100%';
-        containerRef.current.appendChild(childDiv);
+    // Format volume scale margins (occupy bottom 20% height)
+    volumeSeries.priceScale().applyOptions({
+      scaleMargins: {
+        top: 0.8,
+        bottom: 0,
+      },
+    });
 
-        let tradingViewSymbol = symbol.includes(':') ? symbol : `IDX:${symbol}`;
-        if (symbol === 'IHSG') {
-          tradingViewSymbol = 'IDX:COMPOSITE';
-        }
+    chartRef.current = chart;
+    candlestickSeriesRef.current = candlestickSeries;
+    volumeSeriesRef.current = volumeSeries;
 
-        new tradingViewWindow.TradingView.widget({
-          width: '100%',
-          height: '100%',
-          symbol: tradingViewSymbol,
-          interval: 'D',
-          timezone: 'Asia/Jakarta',
-          theme: 'dark',
-          style: '1',
-          locale: 'en',
-          enable_publishing: false,
-          hide_side_toolbar: false,
-          allow_symbol_change: false,
-          container_id: widgetId,
-        });
+    // Responsive resize handler
+    const handleResize = () => {
+      if (containerRef.current && chartRef.current) {
+        chartRef.current.resize(
+          containerRef.current.clientWidth,
+          containerRef.current.clientHeight
+        );
       }
     };
 
-    if (!script) {
-      script = document.createElement('script');
-      script.id = scriptId;
-      script.src = 'https://s3.tradingview.com/tv.js';
-      script.type = 'text/javascript';
-      script.async = true;
-      script.onload = createWidget;
-      document.head.appendChild(script);
-    } else {
-      if ((window as TradingViewWindow).TradingView) {
-        createWidget();
-      } else {
-        script.addEventListener('load', createWidget);
-      }
-    }
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(containerRef.current);
 
     return () => {
-      if (script) {
-        script.removeEventListener('load', createWidget);
-      }
+      resizeObserver.disconnect();
+      chart.remove();
+      chartRef.current = null;
+      candlestickSeriesRef.current = null;
+      volumeSeriesRef.current = null;
     };
-  }, [symbol]);
+  }, []);
+
+  // 2. Synchronize chart data when candles or symbol changes
+  useEffect(() => {
+    if (!candlestickSeriesRef.current || !volumeSeriesRef.current) return;
+
+    const items = candles ?? [];
+
+    // Ensure data is sorted by timestamp (required by lightweight-charts)
+    const sortedItems = [...items].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    // Format to lightweight-charts data models
+    const candleData = sortedItems.map((c) => ({
+      time: Math.floor(new Date(c.timestamp).getTime() / 1000) as any,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+    }));
+
+    const volumeData = sortedItems.map((c) => ({
+      time: Math.floor(new Date(c.timestamp).getTime() / 1000) as any,
+      value: c.volume,
+      color: c.close >= c.open ? 'rgba(0, 208, 132, 0.2)' : 'rgba(255, 59, 48, 0.2)',
+    }));
+
+    candlestickSeriesRef.current.setData(candleData);
+    volumeSeriesRef.current.setData(volumeData);
+
+    // Fit timescale layout so candles fill the canvas area
+    if (sortedItems.length > 0 && chartRef.current) {
+      chartRef.current.timeScale().fitContent();
+    }
+  }, [candles, symbol]);
 
   return (
-    <div className="absolute inset-0 w-full h-full bg-black select-none" ref={containerRef} />
+    <div className="absolute inset-0 w-full h-full bg-[#090909] select-none" ref={containerRef} />
   );
 }
