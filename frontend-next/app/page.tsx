@@ -103,23 +103,14 @@ export default function DashboardPage() {
         className={`flex flex-col h-screen overflow-hidden bg-black select-none text-[#e0e0e0] font-sans justify-center items-center relative transition-all duration-300 ease-out ${
           fadeOut ? 'opacity-0 scale-98' : 'opacity-100'
         }`}
-        style={{
-          background: 'radial-gradient(circle at center, #070707 0%, #000000 100%)'
-        }}
       >
-        {/* Subtle grid backdrop */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(30,30,30,0.03)_1px,_transparent_1px),_linear-gradient(90deg,_rgba(30,30,30,0.03)_1px,_transparent_1px)] bg-[size:25px_25px] pointer-events-none" />
-
-        {/* Subtle glow background halo */}
-        <div className="absolute w-64 h-64 rounded-full bg-[var(--bb-orange)] opacity-5 blur-3xl" />
-
-        {/* Animated Alpha Logo - Ultra precise thin line */}
-        <div className="relative flex items-center justify-center mb-5 z-10">
-          <svg className="w-20 h-20 animate-logo-pulse" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Animated Alpha Logo */}
+        <div className="relative flex items-center justify-center mb-6">
+          <svg className="w-16 h-16 animate-logo-pulse" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path 
               d="M72 28C72 40 60 72 43 72C30 72 20 62 20 48C20 34 30 24 43 24C58 24 67 48 76 72" 
               stroke="url(#alphaGradient)" 
-              strokeWidth="3.5" 
+              strokeWidth="4.5" 
               strokeLinecap="round" 
               className="animate-draw-path" 
             />
@@ -132,69 +123,19 @@ export default function DashboardPage() {
           </svg>
         </div>
 
-        {/* Logo Text & Tagline */}
-        <div className="text-center space-y-1.5 z-10">
-          <div className="text-xs font-black tracking-[0.3em] text-white">
-            α ALPHASTREAM
-          </div>
-          <div className="text-[8px] font-mono tracking-[0.45em] text-neutral-500 uppercase">
-            Quant Analytics Terminal
-          </div>
-        </div>
-
-        {/* Terminal Boot Log Box */}
-        <div className="mt-8 w-72 bg-[#050505] border border-[#141414] p-3.5 font-mono text-[8px] leading-relaxed text-neutral-500 z-10 flex flex-col gap-1.5 min-h-[106px] text-left">
-          {progress >= 5 && (
-            <div className="flex justify-between items-center text-neutral-400">
-              <span>&gt; ESTABLISHING SECURE FEED [127.0.0.1]</span>
-              <span className="text-[var(--bb-green)] font-bold">OK</span>
-            </div>
-          )}
-          {progress >= 30 && (
-            <div className="flex justify-between items-center text-neutral-400">
-              <span>&gt; SYNCHRONIZING IDX SYMBOLS DATABASE</span>
-              <span className="text-[var(--bb-green)] font-bold">OK</span>
-            </div>
-          )}
-          {progress >= 55 && (
-            <div className="flex justify-between items-center text-neutral-400">
-              <span>&gt; MOUNT QUANTITATIVE COMPUTE ENGINE</span>
-              <span className="text-[var(--bb-green)] font-bold">OK</span>
-            </div>
-          )}
-          {progress >= 78 && (
-            <div className="flex justify-between items-center text-neutral-400">
-              <span>&gt; CHANNEL WEBSOCKET FEED PORT 8080</span>
-              <span className="text-[var(--bb-cyan)] font-bold">ONLINE</span>
-            </div>
-          )}
-          {progress >= 100 && (
-            <div className="flex justify-between items-center text-white font-bold">
-              <span>&gt; SYSTEM LOAD SUCCESSFUL</span>
-              <span className="text-[var(--bb-orange)] animate-pulse">READY</span>
-            </div>
-          )}
-        </div>
-
         {/* Loading Progress Bar */}
-        <div className="mt-4 flex flex-col items-center gap-2 w-72 z-10">
-          <div className="w-full h-[2px] bg-[#111] border border-[#1c1c1c] rounded-full overflow-hidden relative">
+        <div className="flex flex-col items-center gap-2.5 w-52">
+          <div className="w-full h-[3px] bg-[#141414] border border-[#222] rounded-full overflow-hidden relative">
             <div 
               className="h-full bg-[var(--bb-orange)] transition-all duration-150 ease-out" 
               style={{ width: `${progress}%` }} 
             />
           </div>
           
-          {/* Status logs */}
-          <div className="flex justify-between w-full font-mono text-[7px] text-neutral-600 tracking-wider">
-            <span>BOATING SYSTEM SEQUENCE...</span>
+          <div className="flex justify-between w-full font-mono text-[9px] text-neutral-500">
+            <span className="tracking-wider">LOADING ALPHASTREAM...</span>
             <span className="text-[var(--bb-orange)] font-bold">{progress}%</span>
           </div>
-        </div>
-
-        {/* Boot stats footer */}
-        <div className="absolute bottom-6 font-mono text-[7px] text-neutral-700 tracking-wider">
-          ALPHASTREAM SECURE BOOT v3.5 // M1 OPTIMIZED // ACTIVE
         </div>
       </div>
     );
