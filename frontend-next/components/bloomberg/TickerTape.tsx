@@ -9,6 +9,8 @@ interface TickerTapeProps {
 
 export default function TickerTape({ stocks }: TickerTapeProps) {
   const tickers = useStockStore((s) => s.tickers);
+  const activeSymbol = useStockStore((s) => s.activeSymbol);
+  const setActiveSymbol = useStockStore((s) => s.setActiveSymbol);
 
   const items = [...stocks, ...stocks]; // Double for seamless loop
 
@@ -26,12 +28,18 @@ export default function TickerTape({ stocks }: TickerTapeProps) {
           const isUp = (ticker?.change ?? 0) >= 0;
           const sign = isUp ? '▲' : '▼';
           const color = isUp ? 'var(--bb-green)' : 'var(--bb-red)';
+          const isActive = stock.symbol === activeSymbol;
 
           return (
             <div key={`${stock.symbol}-${idx}`}
-              className="flex items-center gap-3 px-6 border-r"
-              style={{ borderColor: 'var(--bb-border)', whiteSpace: 'nowrap' }}>
-              <span className="bb-label" style={{ color: 'var(--bb-orange)', fontSize: '10px' }}>
+              onClick={() => setActiveSymbol(stock.symbol)}
+              className="flex items-center gap-3 px-6 border-r cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-all duration-150"
+              style={{
+                borderColor: isActive ? 'var(--bb-orange)' : 'var(--bb-border)',
+                whiteSpace: 'nowrap',
+                backgroundColor: isActive ? 'var(--bb-orange-bg)' : 'transparent',
+              }}>
+              <span className="bb-label font-bold" style={{ color: isActive ? 'var(--bb-orange)' : 'var(--bb-orange)', fontSize: '10px' }}>
                 {stock.symbol}
               </span>
               <span className="bb-mono text-xs font-bold" style={{ color: 'var(--bb-text)' }}>
