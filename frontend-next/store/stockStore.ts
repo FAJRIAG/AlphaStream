@@ -91,7 +91,7 @@ export const useStockStore = create<StockState>((set) => ({
 
   setCandles: (symbol, candles) =>
     set((state) => ({
-      candles: { ...state.candles, [symbol]: candles.slice(-MAX_CANDLES) },
+      candles: { ...state.candles, [symbol]: (candles || []).slice(-MAX_CANDLES) },
     })),
 
   setTicker: (symbol, ticker) =>
