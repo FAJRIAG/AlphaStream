@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useStockWebSocket } from '@/hooks/useStockWebSocket';
 import { useStockStore } from '@/store/stockStore';
-import { stockApi } from '@/lib/api';
+import { stockApi, indicatorApi } from '@/lib/api';
 
 import BloombergHeader from '@/components/bloomberg/BloombergHeader';
 import WatchlistPanel from '@/components/bloomberg/WatchlistPanel';
@@ -32,7 +32,7 @@ function ChartSkeleton() {
 
 // ─── Bloomberg Dashboard Page ───────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const { stocks, activeSymbol, setStocks, setCandles } = useStockStore();
+  const { stocks, activeSymbol, setStocks, setCandles, setIndicators, setPrediction } = useStockStore();
   const [rightPanelTab, setRightPanelTab] = useState<'ticks' | 'broker'>('ticks');
   const [brokerRefreshKey, setBrokerRefreshKey] = useState<number>(0);
   const [maximizedRightPanel, setMaximizedRightPanel] = useState<'quote' | 'technicals' | 'comparison' | 'bottom' | null>(null);
@@ -77,14 +77,40 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [setStocks]);
 
-  // Load OHLCV history whenever active symbol changes
+  // Load OHLCV history, latest indicators, and predictions whenever active symbol changes
   useEffect(() => {
     if (!activeSymbol) return;
+
+    // Fetch candles history
     stockApi
       .getOHLCVHistory(activeSymbol, '1m', 200)
       .then((candles) => setCandles(activeSymbol, candles))
       .catch(console.error);
-  }, [activeSymbol, setCandles]);
+
+    // Fetch latest indicators
+    indicatorApi
+      .getLatest(activeSymbol)
+      .then((indicators) => {
+        if (indicators) {
+          setIndicators(activeSymbol, indicators);
+        }
+      })
+      .catch((err) => {
+        console.warn(`Failed to fetch indicators for ${activeSymbol}:`, err);
+      });
+
+    // Fetch latest predictions
+    stockApi
+      .getPrediction(activeSymbol)
+      .then((prediction) => {
+        if (prediction) {
+          setPrediction(activeSymbol, prediction);
+        }
+      })
+      .catch((err) => {
+        console.warn(`Failed to fetch prediction for ${activeSymbol}:`, err);
+      });
+  }, [activeSymbol, setCandles, setIndicators, setPrediction]);
 
   // Handle transition to dashboard when ready
   useEffect(() => {

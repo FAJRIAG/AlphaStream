@@ -172,6 +172,25 @@ func (u *stockUsecase) GetLatestIndicators(ctx context.Context, symbol string) (
 	if err != nil {
 		return nil, fmt.Errorf("stock_usecase.GetLatestIndicators: %w", err)
 	}
+
+	if ind == nil {
+		candles := u.ringStore.GetSlice(symbol)
+		if len(candles) == 0 {
+			dbCandles, err := u.stockRepo.GetLatestOHLCV(ctx, symbol, "1m", MinCandlesForMA50+10)
+			if err == nil && len(dbCandles) > 0 {
+				candles = dbCandles
+			}
+		}
+		if len(candles) >= MinCandlesForMA20 {
+			computedInd, _ := u.quantEngine.ComputeAll(symbol, candles)
+			if computedInd != nil {
+				computedInd.Symbol = symbol
+				_ = u.indicatorRepo.SaveIndicators(ctx, *computedInd)
+				ind = computedInd
+			}
+		}
+	}
+
 	return ind, nil
 }
 
