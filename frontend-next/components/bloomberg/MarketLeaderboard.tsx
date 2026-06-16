@@ -36,7 +36,7 @@ export default function MarketLeaderboard({ isMaximized, onToggleMaximize }: Mar
         </div>
 
         {/* Rows */}
-        <div className="flex-grow flex flex-col space-y-1.5">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-1">
           {stocks.map((stock) => {
             const ticker = tickers[stock.symbol];
             const isUp = (ticker?.change ?? 0) >= 0;
