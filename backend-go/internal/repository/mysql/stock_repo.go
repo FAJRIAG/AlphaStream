@@ -168,14 +168,18 @@ func (r *stockRepository) SaveOHLCV(ctx context.Context, ohlcv entity.OHLCV) err
 }
 
 // GetOHLCVHistory retrieves candlestick history matching the given query params.
-// All query parameters are applied dynamically with safe argument binding.
+// It gets the latest limit records ordered descending, then returns them in chronological order.
 func (r *stockRepository) GetOHLCVHistory(ctx context.Context, params entity.OHLCVQueryParams) ([]entity.OHLCV, error) {
 	const query = `
 		SELECT id, stock_id, symbol, timestamp, open, high, low, close, volume, timeframe
-		FROM ohlcv
-		WHERE symbol = ? AND timeframe = ?
-		ORDER BY timestamp ASC
-		LIMIT ?`
+		FROM (
+			SELECT id, stock_id, symbol, timestamp, open, high, low, close, volume, timeframe
+			FROM ohlcv
+			WHERE symbol = ? AND timeframe = ?
+			ORDER BY timestamp DESC
+			LIMIT ?
+		) sub
+		ORDER BY timestamp ASC`
 
 	limit := params.Limit
 	if limit <= 0 || limit > 1000 {

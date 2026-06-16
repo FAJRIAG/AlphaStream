@@ -149,7 +149,11 @@ func (u *stockUsecase) GetOHLCVHistory(ctx context.Context, symbol, timeframe st
 			// Fallback: Generate dummy historical candles so the chart is never empty!
 			stock, err := u.stockRepo.GetStockBySymbol(ctx, symbol)
 			if err == nil && stock != nil {
-				dummyCandles := generateDummyOHLCV(stock.ID, symbol, timeframe, limit)
+				var currentPrice float64 = 100.0
+				if stock.Price != nil && *stock.Price > 0 {
+					currentPrice = *stock.Price
+				}
+				dummyCandles := generateDummyOHLCV(stock.ID, symbol, timeframe, limit, currentPrice)
 				for _, c := range dummyCandles {
 					_ = u.stockRepo.SaveOHLCV(ctx, c)
 					u.ringStore.Push(symbol, c)
@@ -649,18 +653,19 @@ func (u *stockUsecase) SeedStockPrices(ctx context.Context, tickers []entity.Tic
 	return u.stockRepo.UpdateStockPricesBatch(ctx, tickers)
 }
 
-func generateDummyOHLCV(stockID int64, symbol, timeframe string, limit int) []entity.OHLCV {
+func generateDummyOHLCV(stockID int64, symbol, timeframe string, limit int, currentPrice float64) []entity.OHLCV {
 	candles := make([]entity.OHLCV, limit)
 	now := time.Now().UTC()
 	
-	// Deterministic starting price based on symbol hash
-	basePrice := float64(100 + (int(symbol[0]) + int(symbol[len(symbol)-1])*17)%15000)
-	if basePrice < 50 {
-		basePrice = 50
+	price := currentPrice
+	if price <= 0 {
+		price = float64(100 + (int(symbol[0]) + int(symbol[len(symbol)-1])*17)%15000)
+		if price < 50 {
+			price = 50
+		}
 	}
 
-	price := basePrice
-	for i := 0; i < limit; i++ {
+	for i := limit - 1; i >= 0; i-- {
 		var diff time.Duration
 		switch timeframe {
 		case "1m":
@@ -673,13 +678,13 @@ func generateDummyOHLCV(stockID int64, symbol, timeframe string, limit int) []en
 		
 		ts := now.Add(-diff)
 		
-		// Random walk with standard seed
-		changePercent := float64((int(ts.Unix())%9) - 4) * 0.0015 // -0.6% to +0.6%
-		open := price
-		closePrice := price * (1.0 + changePercent)
+		// Random walk backward
+		changePercent := float64((int(ts.Unix())%9) - 4) * 0.0012 // -0.48% to +0.48%
+		closePrice := price
+		open := closePrice / (1.0 + changePercent)
 
-		if closePrice < 10 {
-			closePrice = 10
+		if open < 10 {
+			open = 10
 		}
 		
 		high := open
@@ -710,7 +715,8 @@ func generateDummyOHLCV(stockID int64, symbol, timeframe string, limit int) []en
 			Timeframe: timeframe,
 		}
 		
-		price = closePrice
+		// Older price is the current open
+		price = open
 	}
 	
 	return candles
