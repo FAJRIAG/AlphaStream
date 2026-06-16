@@ -139,3 +139,16 @@ func (h *StockHandler) GetBrokerSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, successResponse(summary))
 }
 
+// GetBuyRecommendations handles GET /api/v1/stocks/recommendations
+// Returns a list of recommended buy stocks.
+func (h *StockHandler) GetBuyRecommendations(c *gin.Context) {
+	recommendations, err := h.usecase.GetBuyRecommendations(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse("Failed to retrieve buy recommendations"))
+		return
+	}
+
+	c.JSON(http.StatusOK, successResponse(recommendations))
+}
+
+

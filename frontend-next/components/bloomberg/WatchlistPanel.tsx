@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStockStore } from '@/store/stockStore';
-import type { Stock } from '@/types/stock';
+import { stockApi } from '@/lib/api';
+import type { Stock, BuyRecommendation } from '@/types/stock';
 
 interface WatchlistPanelProps {
   stocks: Stock[];
@@ -10,18 +11,62 @@ interface WatchlistPanelProps {
 export default function WatchlistPanel({ stocks }: WatchlistPanelProps) {
   const { activeSymbol, setActiveSymbol, tickers } = useStockStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'watchlist' | 'recommendations'>('watchlist');
+  const [recommendations, setRecommendations] = useState<BuyRecommendation[]>([]);
+  const [loadingRecs, setLoadingRecs] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'recommendations') {
+      setLoadingRecs(true);
+      stockApi.getBuyRecommendations()
+        .then((data) => {
+          setRecommendations(data);
+          setLoadingRecs(false);
+        })
+        .catch((err) => {
+          console.error('Failed to load buy recommendations:', err);
+          setLoadingRecs(false);
+        });
+    }
+  }, [activeTab]);
 
   const filteredStocks = stocks.filter((stock) =>
     stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
     stock.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredRecommendations = (recommendations || []).filter((rec) =>
+    rec.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    rec.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="bb-panel h-full flex flex-col" style={{ border: 'none' }}>
-      <div className="bb-panel-header">
-        <span className="bb-label" style={{ color: 'var(--bb-orange)', fontSize: '10px' }}>
+      {/* Premium Tab Bar Header */}
+      <div className="bb-panel-header flex items-center gap-2">
+        <button
+          onClick={() => setActiveTab('watchlist')}
+          className={`text-[9px] font-bold tracking-wider hover:text-white uppercase transition-colors cursor-pointer ${
+            activeTab === 'watchlist'
+              ? 'text-[var(--bb-orange)] border-b border-[var(--bb-orange)]'
+              : 'text-neutral-500'
+          }`}
+          style={{ paddingBottom: '2px' }}
+        >
           WATCHLIST
-        </span>
+        </button>
+        <span className="text-neutral-800 text-[9px] font-mono">|</span>
+        <button
+          onClick={() => setActiveTab('recommendations')}
+          className={`text-[9px] font-bold tracking-wider hover:text-white uppercase transition-colors cursor-pointer flex items-center gap-1 ${
+            activeTab === 'recommendations'
+              ? 'text-[var(--bb-orange)] border-b border-[var(--bb-orange)]'
+              : 'text-neutral-500'
+          }`}
+          style={{ paddingBottom: '2px' }}
+        >
+          BEST BUYS <span className="text-[10px]">🔥</span>
+        </button>
         <span className="bb-label ml-auto" style={{ fontSize: '9px' }}>IDX</span>
       </div>
 
@@ -41,53 +86,109 @@ export default function WatchlistPanel({ stocks }: WatchlistPanelProps) {
         background: 'var(--bb-surface2)',
         borderBottom: '1px solid var(--bb-border)',
       }}>
-        <span className="bb-label" style={{ fontSize: '9px' }}>SYMBOL</span>
-        <span className="bb-label" style={{ fontSize: '9px' }}>LAST / CHG%</span>
+        {activeTab === 'watchlist' ? (
+          <>
+            <span className="bb-label" style={{ fontSize: '9px' }}>SYMBOL</span>
+            <span className="bb-label" style={{ fontSize: '9px' }}>LAST / CHG%</span>
+          </>
+        ) : (
+          <>
+            <span className="bb-label" style={{ fontSize: '9px' }}>SYMBOL / BUY PROB</span>
+            <span className="bb-label" style={{ fontSize: '9px' }}>PRICE / TARGET</span>
+          </>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {filteredStocks.map((stock) => {
-          const ticker = tickers[stock.symbol];
-          const isActive = activeSymbol === stock.symbol;
-          const isUp = (ticker?.change ?? 0) >= 0;
+        {activeTab === 'watchlist' ? (
+          filteredStocks.map((stock) => {
+            const ticker = tickers[stock.symbol];
+            const isActive = activeSymbol === stock.symbol;
+            const isUp = (ticker?.change ?? 0) >= 0;
 
-          return (
-            <div
-              key={stock.symbol}
-              onClick={() => setActiveSymbol(stock.symbol)}
-              className={`bb-watchlist-item ${isActive ? 'active' : ''}`}
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="bb-mono text-xs font-bold" style={{
-                    color: isActive ? 'var(--bb-orange)' : 'var(--bb-text)',
-                  }}>
-                    {stock.symbol}
-                  </div>
-                  <div className="bb-label" style={{ fontSize: '9px', marginTop: '1px' }}>
-                    {stock.name.split(' ').slice(0, 2).join(' ')}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="bb-mono text-xs font-bold">
-                    {ticker?.price != null
-                      ? ticker.price.toLocaleString('id-ID', { maximumFractionDigits: 0 })
-                      : '—'}
-                  </div>
-                  {ticker && (
-                    <div className="bb-mono" style={{
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      color: isUp ? 'var(--bb-green)' : 'var(--bb-red)',
+            return (
+              <div
+                key={stock.symbol}
+                onClick={() => setActiveSymbol(stock.symbol)}
+                className={`bb-watchlist-item ${isActive ? 'active' : ''}`}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="bb-mono text-xs font-bold" style={{
+                      color: isActive ? 'var(--bb-orange)' : 'var(--bb-text)',
                     }}>
-                      {isUp ? '▲' : '▼'}{Math.abs(ticker.change_percent).toFixed(2)}%
+                      {stock.symbol}
                     </div>
-                  )}
+                    <div className="bb-label" style={{ fontSize: '9px', marginTop: '1px' }}>
+                      {stock.name.split(' ').slice(0, 2).join(' ')}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="bb-mono text-xs font-bold">
+                      {ticker?.price != null
+                        ? ticker.price.toLocaleString('id-ID', { maximumFractionDigits: 0 })
+                        : '—'}
+                    </div>
+                    {ticker && (
+                      <div className="bb-mono" style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        color: isUp ? 'var(--bb-green)' : 'var(--bb-red)',
+                      }}>
+                        {isUp ? '▲' : '▼'}{Math.abs(ticker.change_percent).toFixed(2)}%
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        ) : loadingRecs ? (
+          <div className="p-4 text-center font-mono text-[9px] text-neutral-500 animate-pulse">
+            LOADING BUY SUGGESTIONS...
+          </div>
+        ) : filteredRecommendations.length === 0 ? (
+          <div className="p-4 text-center font-mono text-[9px] text-neutral-500">
+            NO BUY SIGNALS DETECTED
+          </div>
+        ) : (
+          filteredRecommendations.map((rec) => {
+            const isActive = activeSymbol === rec.symbol;
+            const probPct = Math.round(rec.probability * 100);
+
+            return (
+              <div
+                key={rec.symbol}
+                onClick={() => setActiveSymbol(rec.symbol)}
+                className={`bb-watchlist-item ${isActive ? 'active' : ''}`}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="bb-mono text-xs font-bold flex items-center gap-1" style={{
+                      color: isActive ? 'var(--bb-orange)' : 'var(--bb-text)',
+                    }}>
+                      {rec.symbol}
+                      <span className="text-[8px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-1 rounded font-normal">
+                        {probPct}%
+                      </span>
+                    </div>
+                    <div className="bb-label" style={{ fontSize: '9px', marginTop: '1px' }}>
+                      {rec.name.split(' ').slice(0, 2).join(' ')}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="bb-mono text-xs font-bold text-emerald-400">
+                      {rec.price.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                    </div>
+                    <div className="bb-mono text-[9px] text-neutral-500 font-semibold">
+                      TGT: {rec.target_price_up.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Connection Status */}
@@ -124,3 +225,4 @@ function WsStatus() {
     </div>
   );
 }
+

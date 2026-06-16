@@ -25,4 +25,7 @@ type IIndicatorRepository interface {
 	// GetIndicatorsHistory retrieves indicator history for a symbol within a time range.
 	// Useful for rendering MA lines on the chart alongside OHLCV data.
 	GetIndicatorsHistory(ctx context.Context, symbol string, limit int) ([]entity.TechnicalIndicators, error)
+
+	// GetLatestIndicatorsAll retrieves the latest computed indicators for all stocks.
+	GetLatestIndicatorsAll(ctx context.Context) ([]entity.IndicatorWithStock, error)
 }

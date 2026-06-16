@@ -155,3 +155,57 @@ func (r *indicatorRepository) scanIndicatorRows(rows *sql.Rows) ([]entity.Techni
 
 	return results, nil
 }
+
+// GetLatestIndicatorsAll retrieves the latest computed indicators for all stocks.
+func (r *indicatorRepository) GetLatestIndicatorsAll(ctx context.Context) ([]entity.IndicatorWithStock, error) {
+	const query = `
+		SELECT i.id, i.stock_id, i.symbol, i.timestamp, i.ma_20, i.ma_50, i.rsi_14,
+		       i.is_golden_cross, i.is_death_cross, i.atr_14, i.created_at,
+		       s.name, COALESCE(s.price, 0.0), COALESCE(s.change_percent, 0.0)
+		FROM indicators i
+		JOIN stocks s ON i.stock_id = s.id
+		INNER JOIN (
+			SELECT symbol, MAX(timestamp) as max_ts
+			FROM indicators
+			GROUP BY symbol
+		) latest ON i.symbol = latest.symbol AND i.timestamp = latest.max_ts
+		ORDER BY i.symbol ASC`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("indicator_repo.GetLatestIndicatorsAll query: %w", err)
+	}
+	defer rows.Close()
+
+	var results []entity.IndicatorWithStock
+	for rows.Next() {
+		var ind entity.IndicatorWithStock
+		err := rows.Scan(
+			&ind.ID,
+			&ind.StockID,
+			&ind.Symbol,
+			&ind.Timestamp,
+			&ind.MA20,
+			&ind.MA50,
+			&ind.RSI14,
+			&ind.IsGoldenCross,
+			&ind.IsDeathCross,
+			&ind.ATR14,
+			&ind.CreatedAt,
+			&ind.StockName,
+			&ind.StockPrice,
+			&ind.StockChangePercent,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("indicator_repo.GetLatestIndicatorsAll scan: %w", err)
+		}
+		results = append(results, ind)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("indicator_repo.GetLatestIndicatorsAll rows.Err: %w", err)
+	}
+
+	return results, nil
+}
+

@@ -47,4 +47,7 @@ type IStockRepository interface {
 	// GetLatestOHLCV retrieves the most recent N candles for a symbol.
 	// Used by the Quantitative Engine to compute indicators without loading all history.
 	GetLatestOHLCV(ctx context.Context, symbol, timeframe string, limit int) ([]entity.OHLCV, error)
+
+	// DeleteOHLCV deletes all historical ohlcv candles for a symbol.
+	DeleteOHLCV(ctx context.Context, symbol string) error
 }

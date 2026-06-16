@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"math"
 	"os"
 	"sort"
 	"time"
@@ -46,6 +47,7 @@ type IStockUsecase interface {
 	GetLatestIndicators(ctx context.Context, symbol string) (*entity.TechnicalIndicators, error)
 	GetPrediction(ctx context.Context, symbol string) (*entity.PredictionResult, error)
 	GetBrokerSummary(ctx context.Context, symbol string) (*entity.BrokerSummary, error)
+	GetBuyRecommendations(ctx context.Context) ([]entity.BuyRecommendation, error)
 
 	// ProcessNewCandle is called on each market data tick.
 	// It persists the candle, runs the Quant Engine, and broadcasts results.
@@ -120,6 +122,26 @@ func (u *stockUsecase) GetOHLCVHistory(ctx context.Context, symbol, timeframe st
 	candles, err := u.stockRepo.GetOHLCVHistory(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("stock_usecase.GetOHLCVHistory: %w", err)
+	}
+
+	// Detect price mismatch for simulated/dirty dummy candles in database compared to current stock price.
+	// If the difference is more than 15%, clear the dirty database candles and regenerate them starting from currentPrice.
+	stock, err := u.stockRepo.GetStockBySymbol(ctx, symbol)
+	if err == nil && stock != nil && stock.Price != nil && *stock.Price > 0 && len(candles) > 0 {
+		latestCandleClose := candles[len(candles)-1].Close
+		currentPrice := *stock.Price
+		priceDiffPercent := math.Abs(latestCandleClose-currentPrice) / currentPrice
+		if priceDiffPercent > 0.15 {
+			log.Printf("[Usecase] Price mismatch detected for %s (DB last: %v, current: %v). Clearing dirty candles and regenerating.", symbol, latestCandleClose, currentPrice)
+			
+			// Delete dirty history from DB
+			_ = u.stockRepo.DeleteOHLCV(ctx, symbol)
+			// Clear from in-memory ring buffer
+			u.ringStore.Clear(symbol)
+			
+			// Set candles to nil to force fallback/regeneration
+			candles = nil
+		}
 	}
 
 	// Lazy loading: If database has no history for this stock, fetch it from Yahoo Finance!
@@ -391,6 +413,49 @@ func (u *stockUsecase) GetBrokerSummary(ctx context.Context, symbol string) (*en
 		ForeignBuyPct: foreignBuyPct,
 	}, nil
 }
+
+// GetBuyRecommendations filters and returns stocks with BULLISH predictions, ordered by probability.
+func (u *stockUsecase) GetBuyRecommendations(ctx context.Context) ([]entity.BuyRecommendation, error) {
+	indicatorList, err := u.indicatorRepo.GetLatestIndicatorsAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("stock_usecase.GetBuyRecommendations: %w", err)
+	}
+
+	recommendations := []entity.BuyRecommendation{}
+
+	for _, item := range indicatorList {
+		// Run the Quantitative Engine to build prediction
+		pred := u.quantEngine.buildPrediction(item.Symbol, item.StockPrice, &item.TechnicalIndicators)
+		if pred == nil {
+			continue
+		}
+
+		// We filter for BULLISH predictions (probability > 0.60)
+		if pred.Direction == entity.TrendBullish {
+			recommendations = append(recommendations, entity.BuyRecommendation{
+				Symbol:        item.Symbol,
+				Name:          item.StockName,
+				Price:         item.StockPrice,
+				ChangePercent: item.StockChangePercent,
+				Direction:     pred.Direction,
+				Probability:   pred.Probability,
+				TargetPriceUp: pred.TargetPriceUp,
+				Signals:       pred.Signals,
+			})
+		}
+	}
+
+	// Sort recommendations by probability descending, then by symbol ASC
+	sort.Slice(recommendations, func(i, j int) bool {
+		if recommendations[i].Probability == recommendations[j].Probability {
+			return recommendations[i].Symbol < recommendations[j].Symbol
+		}
+		return recommendations[i].Probability > recommendations[j].Probability
+	})
+
+	return recommendations, nil
+}
+
 
 type stockbitBrokerTrade struct {
 	BrokerCode  string  `json:"brokercode"`

@@ -166,3 +166,10 @@ func (s *RingBufferStore) Count(symbol string) int {
 	}
 	return buf.Count()
 }
+
+// Clear deletes the ring buffer for a given symbol.
+func (s *RingBufferStore) Clear(symbol string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.buffers, symbol)
+}

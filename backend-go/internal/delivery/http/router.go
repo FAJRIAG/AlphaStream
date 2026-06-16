@@ -46,6 +46,7 @@ func NewRouter(cfg RouterConfig) *gin.Engine {
 		stocks := v1.Group("/stocks")
 		{
 			stocks.GET("", cfg.StockHandler.GetAllStocks)
+			stocks.GET("/recommendations", cfg.StockHandler.GetBuyRecommendations)
 			stocks.GET("/:symbol", cfg.StockHandler.GetStockBySymbol)
 			stocks.GET("/:symbol/ohlcv", cfg.StockHandler.GetOHLCVHistory)
 			stocks.GET("/:symbol/prediction", cfg.StockHandler.GetPrediction)

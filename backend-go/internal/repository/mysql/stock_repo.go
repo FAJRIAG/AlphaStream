@@ -310,3 +310,13 @@ func (r *stockRepository) scanOHLCVRows(rows *sql.Rows) ([]entity.OHLCV, error) 
 
 	return candles, nil
 }
+
+// DeleteOHLCV deletes all historical ohlcv candles for a symbol.
+func (r *stockRepository) DeleteOHLCV(ctx context.Context, symbol string) error {
+	const query = `DELETE FROM ohlcv WHERE symbol = ?`
+	_, err := r.db.ExecContext(ctx, query, symbol)
+	if err != nil {
+		return fmt.Errorf("stock_repo.DeleteOHLCV exec: %w", err)
+	}
+	return nil
+}

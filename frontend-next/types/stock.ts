@@ -145,3 +145,15 @@ export interface BrokerSummary {
   foreign_buy_pct: number;
 }
 
+export interface BuyRecommendation {
+  symbol: string;
+  name: string;
+  price: number;
+  change_percent: number;
+  direction: TrendDirection;
+  probability: number;
+  target_price_up: number;
+  signals: PredictionSignals;
+}
+
+

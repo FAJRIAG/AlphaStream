@@ -75,3 +75,24 @@ type PredictionSignals struct {
 	IsDeathCross  bool    `json:"is_death_cross"`
 	RSIZone       string  `json:"rsi_zone"` // "OVERBOUGHT", "NEUTRAL", "OVERSOLD"
 }
+
+// IndicatorWithStock holds technical indicators alongside basic stock information.
+type IndicatorWithStock struct {
+	TechnicalIndicators
+	StockName          string  `json:"stock_name"`
+	StockPrice         float64 `json:"stock_price"`
+	StockChangePercent float64 `json:"stock_change_percent"`
+}
+
+// BuyRecommendation represents a recommended buy opportunity.
+type BuyRecommendation struct {
+	Symbol        string            `json:"symbol"`
+	Name          string            `json:"name"`
+	Price         float64           `json:"price"`
+	ChangePercent float64           `json:"change_percent"`
+	Direction     TrendDirection    `json:"direction"`
+	Probability   float64           `json:"probability"`
+	TargetPriceUp float64           `json:"target_price_up"`
+	Signals       PredictionSignals `json:"signals"`
+}
+

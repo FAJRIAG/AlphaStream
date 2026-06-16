@@ -1,5 +1,5 @@
 // API client — typed fetch wrapper for the AlphaStream Go backend REST API.
-import type { ApiResponse, Stock, OHLCV, TechnicalIndicators, PredictionResult, BrokerSummary } from '@/types/stock';
+import type { ApiResponse, Stock, OHLCV, TechnicalIndicators, PredictionResult, BrokerSummary, BuyRecommendation } from '@/types/stock';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -40,6 +40,9 @@ export const stockApi = {
 
   getBrokerSummary: (symbol: string) =>
     apiFetch<BrokerSummary>(`/api/v1/stocks/${symbol}/broker-summary`),
+
+  getBuyRecommendations: () =>
+    apiFetch<BuyRecommendation[]>('/api/v1/stocks/recommendations'),
 };
 
 // ─── Indicator API ────────────────────────────────────────────────────────────
