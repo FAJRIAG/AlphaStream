@@ -1,0 +1,183 @@
+@import "tailwindcss";
+
+/* ─── Bloomberg Terminal Design System ───────────────────────────────────────*/
+
+:root {
+  /* Bloomberg Color Palette */
+  --bb-black:       #000000;
+  --bb-surface:     #0d0d0d;
+  --bb-surface2:    #141414;
+  --bb-surface3:    #1a1a1a;
+  --bb-border:      #2a2a2a;
+  --bb-border2:     #333333;
+
+  /* Bloomberg Orange — the signature color */
+  --bb-orange:      #f5a623;
+  --bb-orange-dim:  #c47d0e;
+  --bb-orange-bg:   rgba(245, 166, 35, 0.08);
+  --bb-orange-glow: rgba(245, 166, 35, 0.15);
+
+  /* Market Colors */
+  --bb-green:       #00d084;
+  --bb-green-dim:   rgba(0, 208, 132, 0.12);
+  --bb-red:         #ff3b30;
+  --bb-red-dim:     rgba(255, 59, 48, 0.12);
+
+  /* Text */
+  --bb-text:        #e0e0e0;
+  --bb-text-dim:    #888888;
+  --bb-text-muted:  #555555;
+  --bb-text-header: #aaaaaa;
+
+  /* Accent Blue */
+  --bb-blue:        #4da6ff;
+  --bb-cyan:        #00d4e8;
+
+  /* Font */
+  --font-mono: 'JetBrains Mono', 'Roboto Mono', monospace;
+  --font-ui:   var(--font-inter), 'Inter', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bb-black);
+  color: var(--bb-text);
+  font-family: var(--font-ui);
+}
+
+/* ─── Bloomberg Typography ───────────────────────────────────────────────────*/
+
+.bb-mono         { font-family: var(--font-mono); }
+.bb-label        { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bb-text-dim); font-family: var(--font-ui); }
+.bb-value        { font-family: var(--font-mono); font-weight: 700; }
+.bb-value-lg     { font-family: var(--font-mono); font-weight: 700; font-size: 1.5rem; }
+.bb-value-xl     { font-family: var(--font-mono); font-weight: 700; font-size: 2rem; line-height: 1; }
+.bb-section-title { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bb-orange); border-bottom: 1px solid var(--bb-orange-dim); padding-bottom: 4px; margin-bottom: 8px; }
+
+/* ─── Bloomberg Panels ───────────────────────────────────────────────────────*/
+
+.bb-panel {
+  background: var(--bb-surface);
+  border: 1px solid var(--bb-border);
+  overflow: hidden;
+}
+
+.bb-panel-header {
+  background: var(--bb-surface2);
+  border-bottom: 1px solid var(--bb-border);
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.bb-panel-body {
+  padding: 10px;
+}
+
+/* ─── Data Rows ──────────────────────────────────────────────────────────────*/
+
+.bb-data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--bb-border);
+}
+.bb-data-row:last-child { border-bottom: none; }
+
+/* ─── Market Colors ──────────────────────────────────────────────────────────*/
+
+.bb-up   { color: var(--bb-green); }
+.bb-down { color: var(--bb-red); }
+.bb-flat { color: var(--bb-text-dim); }
+.bb-orange-text { color: var(--bb-orange); }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────────*/
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bb-border2); }
+
+/* ─── Ticker Tape Animation ──────────────────────────────────────────────────*/
+
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: tickerScroll 4000s linear infinite;
+}
+.ticker-track:hover { animation-play-state: paused; }
+
+/* ─── Price Flash ────────────────────────────────────────────────────────────*/
+
+@keyframes flashUp {
+  0%   { background: var(--bb-green-dim); }
+  100% { background: transparent; }
+}
+@keyframes flashDown {
+  0%   { background: var(--bb-red-dim); }
+  100% { background: transparent; }
+}
+.flash-up   { animation: flashUp 0.4s ease-out; }
+.flash-down { animation: flashDown 0.4s ease-out; }
+
+/* ─── Active Watchlist Item ──────────────────────────────────────────────────*/
+
+.bb-watchlist-item {
+  cursor: pointer;
+  padding: 5px 8px;
+  border-left: 2px solid transparent;
+  transition: all 0.1s;
+}
+.bb-watchlist-item:hover {
+  background: var(--bb-surface2);
+  border-left-color: var(--bb-border2);
+}
+.bb-watchlist-item.active {
+  background: var(--bb-orange-bg);
+  border-left-color: var(--bb-orange);
+}
+
+/* ─── RSI Bar ────────────────────────────────────────────────────────────────*/
+
+.rsi-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bb-surface3);
+  position: relative;
+  overflow: visible;
+}
+.rsi-bar-fill {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+.rsi-zone-ob { left: 70%; }
+.rsi-zone-os { left: 30%; }
+
+/* ─── Blink animation ────────────────────────────────────────────────────────*/
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+.bb-blink { animation: blink 1s step-end infinite; }
+
+/* ─── Grid layout helpers ────────────────────────────────────────────────────*/
+.bb-grid-main {
+  display: grid;
+  grid-template-columns: 200px 1fr 240px;
+  grid-template-rows: 1fr;
+  gap: 1px;
+  background: var(--bb-border);
+  height: 100%;
+}
+
+.bb-divider-v {
+  width: 1px;
+  background: var(--bb-border);
+}
