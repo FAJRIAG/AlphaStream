@@ -37,15 +37,44 @@ export default function DashboardPage() {
   const [brokerRefreshKey, setBrokerRefreshKey] = useState<number>(0);
   const [maximizedRightPanel, setMaximizedRightPanel] = useState<'quote' | 'technicals' | 'comparison' | 'bottom' | null>(null);
   const [isChartMaximized, setIsChartMaximized] = useState(false);
+  
+  // Loading states
   const [mounted, setMounted] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [fadeOut, setFadeOut] = useState(false);
 
   // Connect WebSocket — routes messages to Zustand store
   useStockWebSocket();
 
-  // Load stock master list on mount
+  // Load stock master list on mount and handle progress increments
   useEffect(() => {
     setMounted(true);
-    stockApi.getAllStocks().then(setStocks).catch(console.error);
+
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        // Progress builds up dynamically (quicker at start, slower at end to simulate fetching)
+        const diff = Math.max(1, Math.floor((100 - prev) * 0.12));
+        return Math.min(100, prev + diff);
+      });
+    }, 100);
+
+    stockApi.getAllStocks()
+      .then((data) => {
+        setStocks(data);
+        setIsDataLoaded(true);
+      })
+      .catch((err) => {
+        console.error(err);
+        setIsDataLoaded(true); // Fallback to let user in if offline
+      });
+
+    return () => clearInterval(interval);
   }, [setStocks]);
 
   // Load OHLCV history whenever active symbol changes
@@ -57,11 +86,91 @@ export default function DashboardPage() {
       .catch(console.error);
   }, [activeSymbol, setCandles]);
 
-  if (!mounted) {
+  // Handle transition to dashboard when ready
+  useEffect(() => {
+    if (progress === 100 && isDataLoaded) {
+      setFadeOut(true);
+      const timer = setTimeout(() => {
+        setShowDashboard(true);
+      }, 500); // 500ms fade transition
+      return () => clearTimeout(timer);
+    }
+  }, [progress, isDataLoaded]);
+
+  // Get loading details matching current progress
+  const getStatusMessage = () => {
+    if (progress < 25) return 'ESTABLISHING SECURE CONNECTION TO IDX FEED...';
+    if (progress < 55) return 'SYNCHRONIZING SYMBOLS DATABASE [934 EMITEN]...';
+    if (progress < 75) return 'INITIALIZING QUANTITATIVE PREDICTIVE ENGINE...';
+    if (progress < 99) return 'WIRING REAL-TIME WEBSOCKET DATA STREAM...';
+    return 'SYSTEM READY. LAUNCHING ALPHASTREAM...';
+  };
+
+  if (!showDashboard) {
     return (
-      <div className="flex flex-col h-screen overflow-hidden bg-black select-none text-[#e0e0e0] font-sans justify-center items-center">
-        <div className="text-xs font-mono tracking-widest text-[#ff9800] uppercase animate-pulse">
-          INITIALIZING ALPHASTREAM TERMINAL...
+      <div 
+        className={`flex flex-col h-screen overflow-hidden bg-black select-none text-[#e0e0e0] font-sans justify-center items-center relative transition-all duration-500 ease-out ${
+          fadeOut ? 'opacity-0 scale-95' : 'opacity-100'
+        }`}
+        style={{
+          background: 'radial-gradient(circle at center, #140d02 0%, #000000 100%)'
+        }}
+      >
+        {/* Subtle grid backdrop */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(42,42,42,0.05)_1px,_transparent_1px),_linear-gradient(90deg,_rgba(42,42,42,0.05)_1px,_transparent_1px)] bg-[size:30px_30px] pointer-events-none" />
+
+        {/* Glowing background halo */}
+        <div className="absolute w-72 h-72 rounded-full bg-gradient-to-tr from-[var(--bb-orange)] to-[var(--bb-cyan)] opacity-5 blur-3xl animate-pulse" />
+
+        {/* Animated Alpha Logo */}
+        <div className="relative flex items-center justify-center mb-6 z-10">
+          <svg className="w-24 h-24 animate-logo-pulse" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path 
+              d="M72 28C72 40 60 72 43 72C30 72 20 62 20 48C20 34 30 24 43 24C58 24 67 48 76 72" 
+              stroke="url(#alphaGradient)" 
+              strokeWidth="6" 
+              strokeLinecap="round" 
+              className="animate-draw-path" 
+            />
+            <defs>
+              <linearGradient id="alphaGradient" x1="20" y1="24" x2="76" y2="72" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#f5a623" />
+                <stop offset="50%" stopColor="#ff7b00" />
+                <stop offset="100%" stopColor="#00d4e8" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        {/* Logo Text & Tagline */}
+        <div className="text-center space-y-1 z-10">
+          <div className="text-sm font-black tracking-[0.25em] text-white">
+            α ALPHASTREAM
+          </div>
+          <div className="text-[8px] font-mono tracking-[0.4em] text-neutral-500 uppercase">
+            Quant Analytics Terminal
+          </div>
+        </div>
+
+        {/* Loading Progress Bar */}
+        <div className="mt-12 flex flex-col items-center gap-2.5 w-60 z-10">
+          <div className="w-full h-1 bg-[#141414] border border-[#222] rounded-full overflow-hidden relative">
+            <div 
+              className="h-full bg-gradient-to-r from-[var(--bb-orange)] to-[#ff7b00] rounded-full transition-all duration-200 ease-out" 
+              style={{ width: `${progress}%` }} 
+            />
+          </div>
+          
+          {/* Status logs */}
+          <div className="flex justify-between w-full font-mono text-[8px] text-neutral-500">
+            <span className="truncate pr-4 uppercase">{getStatusMessage()}</span>
+            <span className="text-[var(--bb-orange)] font-bold">{progress}%</span>
+          </div>
+        </div>
+
+        {/* Boot stats footer */}
+        <div className="absolute bottom-6 font-mono text-[8px] text-neutral-600 tracking-wider">
+          ALPHASTREAM SECURE BOOT v3.5 // M1 OPTIMIZED // ACTIVE
         </div>
       </div>
     );

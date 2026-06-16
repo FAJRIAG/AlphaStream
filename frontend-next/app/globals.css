@@ -181,3 +181,36 @@ html, body {
   width: 1px;
   background: var(--bb-border);
 }
+
+/* ─── Loading Logo Animation ────────────────────────────────────────────────── */
+
+@keyframes drawPath {
+  0% {
+    stroke-dashoffset: 280;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes logoPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 12px rgba(245, 166, 35, 0.25)) drop-shadow(0 0 20px rgba(0, 212, 232, 0.1));
+  }
+  50% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 28px rgba(245, 166, 35, 0.65)) drop-shadow(0 0 45px rgba(0, 212, 232, 0.45));
+  }
+}
+
+.animate-draw-path {
+  stroke-dasharray: 280;
+  stroke-dashoffset: 280;
+  animation: drawPath 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.animate-logo-pulse {
+  animation: logoPulse 2s ease-in-out infinite;
+}
+
