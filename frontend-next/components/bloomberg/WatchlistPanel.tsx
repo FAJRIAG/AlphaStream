@@ -41,7 +41,8 @@ export default function WatchlistPanel({ stocks }: WatchlistPanelProps) {
   );
 
   return (
-    <div className="bb-panel h-full flex flex-col" style={{ border: 'none' }}>
+    <aside id="watchlist-sidebar" className="bb-panel h-full flex flex-col" style={{ border: 'none' }}>
+      <h2 className="sr-only">Stock Watchlist and Best Buy Signals</h2>
       {/* Premium Tab Bar Header */}
       <div className="bb-panel-header flex items-center gap-2">
         <button
@@ -193,7 +194,7 @@ export default function WatchlistPanel({ stocks }: WatchlistPanelProps) {
 
       {/* Connection Status */}
       <WsStatus />
-    </div>
+    </aside>
   );
 }
 

@@ -4,12 +4,13 @@ import MarketClock from './MarketClock';
 
 export default function BloombergHeader() {
   return (
-    <div className="flex justify-between items-center px-4" style={{
+    <header className="flex justify-between items-center px-4" style={{
       height: '34px',
       background: 'var(--bb-surface)',
       borderBottom: '1px solid var(--bb-orange-dim)',
       flexShrink: 0,
     }}>
+      <h1 className="sr-only">AlphaStream Terminal — Real-Time IDX Analytics</h1>
       <div className="flex items-center gap-2">
         <span className="bb-mono text-xs font-black tracking-wider" style={{ color: 'var(--bb-orange)' }}>
           α ALPHASTREAM
@@ -25,6 +26,6 @@ export default function BloombergHeader() {
         </span>
       </div>
       <MarketClock />
-    </div>
+    </header>
   );
 }

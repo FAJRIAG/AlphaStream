@@ -173,7 +173,7 @@ export default function DashboardPage() {
       <BloombergHeader />
 
       {/* 2. Main Workspace Layout */}
-      <div className="flex-1 min-h-0 relative">
+      <main id="terminal-workspace" className="flex-1 min-h-0 relative">
         <div
           className="h-full"
           style={{
@@ -334,7 +334,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* 3. Prediction Status Bar */}
       <PredictionBar symbol={activeSymbol} />
